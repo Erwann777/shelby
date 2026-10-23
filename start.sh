@@ -1,5 +1,11 @@
-﻿#!/bin/sh
+#!/bin/sh
 set -e
+
+echo "==> Creating storage directories..."
+mkdir -p /var/www/storage/framework/views
+mkdir -p /var/www/storage/framework/cache/data
+mkdir -p /var/www/storage/framework/sessions
+mkdir -p /var/www/storage/logs
 
 echo "==> Running migrations..."
 php artisan migrate --force

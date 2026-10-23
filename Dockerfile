@@ -1,7 +1,7 @@
 FROM php:8.2-cli
 
 # Install system deps + NodeSource Node.js 20 LTS (compatible with Vite 7)
-RUN apt-get update && apt-get install -y curl gnupg zip unzip git libpq-dev \
+RUN apt-get update && apt-get install -y curl gnupg zip unzip git libpq-dev dos2unix \
     && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
     && docker-php-ext-install pdo pdo_pgsql \
@@ -23,6 +23,13 @@ RUN composer install --no-dev --optimize-autoloader
 
 # Install Node.js dependencies and build Vite assets
 RUN npm ci && npm run build
+
+# Fix line endings and create required storage directories
+RUN dos2unix /var/www/start.sh \
+    && mkdir -p /var/www/storage/framework/views \
+               /var/www/storage/framework/cache/data \
+               /var/www/storage/framework/sessions \
+               /var/www/storage/logs
 
 # Set permissions
 RUN chown -R www-data:www-data /var/www/storage /var/www/bootstrap/cache \
