@@ -8,16 +8,15 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('rsvps', function (Blueprint $table) {
+        Schema::create('tamu', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->boolean('attending');
             $table->timestamps();
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('rsvps');
+        Schema::dropIfExists('tamu');
     }
 };

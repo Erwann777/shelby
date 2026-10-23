@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Rsvp;
+use App\Models\Tamu;
 use Illuminate\Http\Request;
 
 class RsvpController extends Controller
@@ -23,35 +23,57 @@ class RsvpController extends Controller
         }
 
         $validated = $request->validate([
-            'name'      => 'required|string|max:255',
-            'attending' => 'required|in:1,0',
+            'name' => 'required|string|max:255',
         ]);
 
         $rsvpData = [
-            'name'      => $validated['name'],
-            'attending' => (bool) $validated['attending'],
-            'created_at'=> now()->toFormattedDateString(),
+            'name'       => $validated['name'],
+            'created_at' => now()->toFormattedDateString(),
         ];
 
-        Rsvp::create([
-            'name'      => $rsvpData['name'],
-            'attending' => $rsvpData['attending'],
+        Tamu::create([
+            'name' => $rsvpData['name'],
         ]);
 
         // Store in THIS user's session — other browsers are not affected
         $request->session()->put('my_rsvp', $rsvpData);
 
-        $message = $rsvpData['attending']
-            ? "Yay! Can't wait to see you at the party, {$rsvpData['name']}! 🎉"
-            : "Aw, we'll miss you, {$rsvpData['name']}! Thanks for letting us know. 💖";
+        $message = "Yay! Can't wait to see you at the party, {$rsvpData['name']}! 🎉";
 
-        return redirect('/')->with('success', $message)->with('attending', $rsvpData['attending']);
+        return redirect('/')->with('success', $message);
+    }
+
+    public function gateEntry(Request $request)
+    {
+        $validated = $request->validate([
+            'name' => 'required|string|max:255',
+        ]);
+
+        $name = trim($validated['name']);
+
+        // Save to tamu table
+        Tamu::create([
+            'name' => $name,
+        ]);
+
+        // Store in session so the homepage can greet them by name
+        $request->session()->put('my_rsvp', [
+            'name'       => $name,
+            'created_at' => now()->toFormattedDateString(),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'name'    => $name,
+            'message' => "Yay! Can't wait to see you, {$name}! 🎉",
+        ]);
     }
 
     public function guests()
     {
-        $guests = Rsvp::orderBy('created_at', 'desc')->get();
-        return view('guests', compact('guests'));
+        $guests     = Tamu::orderBy('created_at', 'desc')->get();
+        $todayCount = Tamu::whereDate('created_at', today())->count();
+        $firstGuest = Tamu::orderBy('created_at', 'asc')->first();
+        return view('guests', compact('guests', 'todayCount', 'firstGuest'));
     }
 }
-
