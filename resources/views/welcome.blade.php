@@ -987,11 +987,11 @@
         <h2 class="no-title">Aww, that's a shame…</h2>
         <p class="no-msg">
             It won't be the same without you, but we completely understand. 💕<br><br>
-            Elvina sends you the <strong>warmest hugs</strong> and the <strong>biggest love</strong> from afar —
+            Shelby sends you the <strong>warmest hugs</strong> and the <strong>biggest love</strong> from afar —
             you're always in her heart, no matter where you are. 🎀<br><br>
             Wishing you all the good vibes on that day! ✨
         </p>
-        <p class="no-footer">With love, Elvina 🌷</p>
+        <p class="no-footer">With love, Shelby 🌷</p>
     </div>
 </div>
 
