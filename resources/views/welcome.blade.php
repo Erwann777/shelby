@@ -2086,7 +2086,7 @@ html,body{width:100%;max-width:100%}
 .tw-thumb{position:relative;display:block;width:min(100%,calc((100vh - 250px)*.6667));width:min(100%,calc((100dvh - 250px)*.6667));
   min-width:110px;aspect-ratio:2/3;border-radius:18px;overflow:hidden;background:#fff7f0;box-shadow:0 14px 30px rgba(120,10,50,.35);
   transition:transform .25s cubic-bezier(.22,1,.36,1)}
-.tw-thumb::before{content:'🙂';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:44px;opacity:.5}
+.tw-thumb::before{content:'';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:44px;opacity:.5}
 .tw-thumb img{position:absolute;inset:0;width:100%;height:100%;display:block}
 .tw-choice:hover .tw-thumb{transform:translateY(-4px) scale(1.02)}
 .tw-choice:active .tw-thumb{transform:scale(.97)}
@@ -2166,11 +2166,11 @@ html,body{width:100%;max-width:100%}
             <div class="tw-choices">
                 <button type="button" class="tw-choice" data-gender="boy">
                     <span class="tw-thumb"><img src="{{ asset('images/twibbon-boy.webp') }}" alt="Blue twibbon for boys"></span>
-                    <span class="tw-pick">💙 Boy</span>
+                    <span class="tw-pick"> Boy</span>
                 </button>
                 <button type="button" class="tw-choice" data-gender="girl">
                     <span class="tw-thumb"><img src="{{ asset('images/twibbon-girl.webp') }}" alt="Pink twibbon for girls"></span>
-                    <span class="tw-pick">💗 Girl</span>
+                    <span class="tw-pick"> Girl</span>
                 </button>
             </div>
         </section>
@@ -2186,9 +2186,9 @@ html,body{width:100%;max-width:100%}
                 <button type="button" class="tw-chip" id="tw-timer">⏱ Timer: Off</button>
             </div>
             <div class="tw-controls">
-                <button type="button" class="tw-side-btn" id="tw-upload" aria-label="Choose a photo or open the camera app">🖼️<small>Gallery</small></button>
+                <button type="button" class="tw-side-btn" id="tw-upload" aria-label="Choose a photo or open the camera app"><small>Gallery</small></button>
                 <button type="button" class="tw-shutter" id="tw-shutter" aria-label="Take photo" disabled><span></span></button>
-                <button type="button" class="tw-side-btn" id="tw-flip" aria-label="Switch camera" hidden>🔄<small>Flip</small></button>
+                <button type="button" class="tw-side-btn" id="tw-flip" aria-label="Switch camera" hidden><small>Flip</small></button>
             </div>
             <input type="file" id="tw-file" accept="image/*" hidden>
         </section>
@@ -2197,8 +2197,8 @@ html,body{width:100%;max-width:100%}
         <section class="tw-step" data-step="result">
             <div class="tw-stage"><img id="tw-result" alt="Your twibbon photo"></div>
             <div class="tw-actions">
-                <button type="button" class="tw-btn tw-btn-primary" id="tw-save">⬇️ Save Image</button>
-                <button type="button" class="tw-btn tw-btn-ghost" id="tw-retake">🔁 Retake</button>
+                <button type="button" class="tw-btn tw-btn-primary" id="tw-save"> Save Image</button>
+                <button type="button" class="tw-btn tw-btn-ghost" id="tw-retake"> Retake</button>
             </div>
             <p class="tw-note" id="tw-drive" hidden></p>
             <p class="tw-note" id="tw-note">🔒 Your photo stays on your device — it is never uploaded.</p>
@@ -2220,8 +2220,8 @@ html,body{width:100%;max-width:100%}
     var SRC    = { boy: root.getAttribute('data-boy'), girl: root.getAttribute('data-girl') };
     var TITLES = { choose: 'Pick your twibbon', camera: 'Strike a pose! 📸', result: 'Looking great! ✨' };
     /* ── GOOGLE DRIVE: isi setelah deploy Apps Script (lihat google-apps-script/Code.gs). Kosongkan = tidak upload. ── */
-    var DRIVE_URL   = '';   // contoh: 'https://script.google.com/macros/s/AKfy.../exec'
-    var DRIVE_TOKEN = '';   // sama persis dengan TOKEN di Code.gs
+    var DRIVE_URL   = 'https://script.google.com/macros/s/AKfycbxaoVmx4DXF4FoGtjqRyMFfHhNHmHD3Yfljj1kuA8l7Be3QFoeKF4LU0_KVZDzBaPaQhQ/exec';   // contoh: 'https://script.google.com/macros/s/AKfy.../exec'
+    var DRIVE_TOKEN = 'shelby';   // sama persis dengan TOKEN di Code.gs
     var NOTE   = DRIVE_URL ? 'Tap Save Image to keep your photo on your phone.' : '🔒 Your photo stays on your device — it is never uploaded.';
     var NOTE_IOS = '📱 Tap Save Image, then choose "Save Image" in the menu to add it to Photos. Or press & hold the photo → Add to Photos.';
     var W = 1024, H = 1536;                     // ukuran hasil = ukuran twibbon (2:3)
