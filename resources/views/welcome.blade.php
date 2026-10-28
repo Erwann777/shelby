@@ -875,6 +875,7 @@
 <div id="gate-overlay" role="dialog" aria-modal="true" aria-label="Party invitation" data-home-url="{{ $homeUrl ?? '' }}">
     <span class="gate-rays" aria-hidden="true"></span>
     <div id="gate-bokeh" aria-hidden="true"></div>
+    <img class="gate-logo" src="{{ asset('images/create-logo.webp') }}" alt="Create — Your special moments, online" draggable="false">
 
     <div class="gate-card">
         <div class="gate-card-in">
@@ -2040,6 +2041,13 @@ html,body{width:100%;max-width:100%}
      File twibbon: public/images/twibbon-boy.webp (biru) & public/images/twibbon-girl.webp (pink)
 ══════════════════════════════════════════════════════════════ --}}
 <style>
+/* logo Create — pojok kanan bawah layar gate */
+.gate-logo{position:fixed;z-index:3;pointer-events:none;user-select:none;-webkit-user-select:none;
+  right:max(14px,env(safe-area-inset-right));bottom:max(12px,env(safe-area-inset-bottom));
+  box-sizing:border-box;width:clamp(104px,28vw,180px);height:auto;
+  background:#fff;padding:6px 10px;border-radius:14px;box-shadow:0 4px 14px rgba(120,10,50,.25)}
+@media (min-width:1024px){.gate-logo{width:clamp(160px,12vw,230px);right:24px;bottom:20px;padding:8px 14px;border-radius:18px}}
+@media (max-height:380px){.gate-logo{display:none}}
 /* tombol pembuka (di gate card, di bawah "No, sorry…") */
 .gate-btn-cap{background:rgba(255,255,255,.92);color:#d6125f;border:2px solid rgba(255,255,255,.95);
   box-shadow:0 8px 22px rgba(120,10,50,.28),inset 0 1px 0 #fff}
@@ -2078,7 +2086,7 @@ html,body{width:100%;max-width:100%}
 .tw-thumb{position:relative;display:block;width:min(100%,calc((100vh - 250px)*.6667));width:min(100%,calc((100dvh - 250px)*.6667));
   min-width:110px;aspect-ratio:2/3;border-radius:18px;overflow:hidden;background:#fff7f0;box-shadow:0 14px 30px rgba(120,10,50,.35);
   transition:transform .25s cubic-bezier(.22,1,.36,1)}
-.tw-thumb::before{content:'';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:44px;opacity:.5}
+.tw-thumb::before{content:'🙂';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:44px;opacity:.5}
 .tw-thumb img{position:absolute;inset:0;width:100%;height:100%;display:block}
 .tw-choice:hover .tw-thumb{transform:translateY(-4px) scale(1.02)}
 .tw-choice:active .tw-thumb{transform:scale(.97)}
@@ -2158,11 +2166,11 @@ html,body{width:100%;max-width:100%}
             <div class="tw-choices">
                 <button type="button" class="tw-choice" data-gender="boy">
                     <span class="tw-thumb"><img src="{{ asset('images/twibbon-boy.webp') }}" alt="Blue twibbon for boys"></span>
-                    <span class="tw-pick">Boy</span>
+                    <span class="tw-pick">💙 Boy</span>
                 </button>
                 <button type="button" class="tw-choice" data-gender="girl">
                     <span class="tw-thumb"><img src="{{ asset('images/twibbon-girl.webp') }}" alt="Pink twibbon for girls"></span>
-                    <span class="tw-pick">Girl</span>
+                    <span class="tw-pick">💗 Girl</span>
                 </button>
             </div>
         </section>
@@ -2178,9 +2186,9 @@ html,body{width:100%;max-width:100%}
                 <button type="button" class="tw-chip" id="tw-timer">⏱ Timer: Off</button>
             </div>
             <div class="tw-controls">
-                <button type="button" class="tw-side-btn" id="tw-upload" aria-label="Choose a photo or open the camera app"><small>Gallery</small></button>
+                <button type="button" class="tw-side-btn" id="tw-upload" aria-label="Choose a photo or open the camera app">🖼️<small>Gallery</small></button>
                 <button type="button" class="tw-shutter" id="tw-shutter" aria-label="Take photo" disabled><span></span></button>
-                <button type="button" class="tw-side-btn" id="tw-flip" aria-label="Switch camera" hidden><small>Flip</small></button>
+                <button type="button" class="tw-side-btn" id="tw-flip" aria-label="Switch camera" hidden>🔄<small>Flip</small></button>
             </div>
             <input type="file" id="tw-file" accept="image/*" hidden>
         </section>
@@ -2189,10 +2197,11 @@ html,body{width:100%;max-width:100%}
         <section class="tw-step" data-step="result">
             <div class="tw-stage"><img id="tw-result" alt="Your twibbon photo"></div>
             <div class="tw-actions">
-                <button type="button" class="tw-btn tw-btn-primary" id="tw-save">Save Image</button>
-                <button type="button" class="tw-btn tw-btn-ghost" id="tw-retake">Retake</button>
+                <button type="button" class="tw-btn tw-btn-primary" id="tw-save">⬇️ Save Image</button>
+                <button type="button" class="tw-btn tw-btn-ghost" id="tw-retake">🔁 Retake</button>
             </div>
-            <p class="tw-note" id="tw-note">Your photo stays on your device — it is never uploaded.</p>
+            <p class="tw-note" id="tw-drive" hidden></p>
+            <p class="tw-note" id="tw-note">🔒 Your photo stays on your device — it is never uploaded.</p>
         </section>
     </main>
 </div>
@@ -2210,13 +2219,17 @@ html,body{width:100%;max-width:100%}
 
     var SRC    = { boy: root.getAttribute('data-boy'), girl: root.getAttribute('data-girl') };
     var TITLES = { choose: 'Pick your twibbon', camera: 'Strike a pose! 📸', result: 'Looking great! ✨' };
-    var NOTE   = '🔒 Your photo stays on your device — it is never uploaded.';
+    /* ── GOOGLE DRIVE: isi setelah deploy Apps Script (lihat google-apps-script/Code.gs). Kosongkan = tidak upload. ── */
+    var DRIVE_URL   = '';   // contoh: 'https://script.google.com/macros/s/AKfy.../exec'
+    var DRIVE_TOKEN = '';   // sama persis dengan TOKEN di Code.gs
+    var NOTE   = DRIVE_URL ? 'Tap Save Image to keep your photo on your phone.' : '🔒 Your photo stays on your device — it is never uploaded.';
     var NOTE_IOS = '📱 Tap Save Image, then choose "Save Image" in the menu to add it to Photos. Or press & hold the photo → Add to Photos.';
     var W = 1024, H = 1536;                     // ukuran hasil = ukuran twibbon (2:3)
 
     var gender = null, step = 'choose', stream = null, facing = 'user', mirror = true,
         timerSec = 0, busy = false, blob = null, blobUrl = null, imgs = {}, startToken = 0, cdTimer = null;
 
+    var driveEl = document.getElementById('tw-drive'), upId = 0;
     var isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
     /* ---------- util ---------- */
@@ -2239,7 +2252,7 @@ html,body{width:100%;max-width:100%}
     function clearCountdown() { if (cdTimer) { clearInterval(cdTimer); cdTimer = null; } countEl.hidden = true; }
     function clearResult() {
         if (blobUrl) { URL.revokeObjectURL(blobUrl); blobUrl = null; }
-        blob = null; resImg.removeAttribute('src');
+        blob = null; resImg.removeAttribute('src'); upId++; if (driveEl) driveEl.hidden = true;
     }
 
     /* ---------- kamera ---------- */
@@ -2300,7 +2313,7 @@ html,body{width:100%;max-width:100%}
                 clearResult();
                 blob = b; blobUrl = URL.createObjectURL(b);                    // hanya di memori browser
                 resImg.src = blobUrl;
-                stopCam(); noteEl.textContent = isIOS ? NOTE_IOS : NOTE; setStep('result');
+                stopCam(); noteEl.textContent = isIOS ? NOTE_IOS : NOTE; setStep('result'); uploadToDrive(b);
             }, 'image/jpeg', 0.92);
         }, function () { busy = false; showMsg('Twibbon failed to load. Check your connection and try again.'); });
     }
@@ -2318,6 +2331,27 @@ html,body{width:100%;max-width:100%}
             n--;
             if (n <= 0) { clearCountdown(); go(); } else { countEl.textContent = n; }
         }, 1000);
+    }
+
+    /* ---------- salinan ke Google Drive (Apps Script) ---------- */
+    function uploadToDrive(b) {
+        if (!DRIVE_URL) return;
+        var id = ++upId, who = '';
+        try { who = sessionStorage.getItem('gate_guest_name') || ''; } catch (e) {}
+        who = who.replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '_').slice(0, 30) || 'guest';
+        var name = who + '_' + gender + '_' + Date.now() + '.jpg';
+        function status(t) { if (id === upId) { driveEl.hidden = !t; driveEl.textContent = t || ''; } }
+        status('☁️ Sending a copy to Loviena\'s album…');
+        var fr = new FileReader();
+        fr.onload = function () {
+            var data = String(fr.result).split(',')[1];
+            fetch(DRIVE_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                body: JSON.stringify({ token: DRIVE_TOKEN, name: name, data: data }) })
+            .then(function (r) { return r.json(); })
+            .then(function (j) { status(j && j.ok ? '💗 A copy was added to Loviena\'s album!' : '⚠️ Could not reach the album, but you can still save your photo.'); })
+            .catch(function () { status('⚠️ Could not reach the album, but you can still save your photo.'); });
+        };
+        fr.readAsDataURL(b);
     }
 
     /* ---------- simpan ke perangkat ---------- */
