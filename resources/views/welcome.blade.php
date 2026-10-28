@@ -892,6 +892,7 @@
             <div class="gate-btns">
                 <button id="gate-yes" class="gate-btn gate-btn-yes" type="button">🥂 YASHHH!</button>
                 <button id="gate-no" class="gate-btn gate-btn-no" type="button"> No, sorry…</button>
+                <button id="gate-capture" class="gate-btn gate-btn-cap" type="button" data-tw-open>📸 Let's Capture The Moment</button>
             </div>
         </div>
     </div>
@@ -1222,6 +1223,7 @@
                 </div>
             </div>
         </div>
+
 
     </div>
 </div>
@@ -2028,6 +2030,375 @@ html,body{width:100%;max-width:100%}
   .toast-glass{transition:none}
 }
 </style>
+
+
+{{-- ══════════════════════════════════════════════════════════════
+     TWIBBON PHOTO BOOTH — "Let's Capture The Moment"
+     • Foto diambil langsung dari kamera browser, digabung dengan twibbon di <canvas>.
+     • Hasil foto TIDAK dikirim ke server / storage Render — hanya hidup di memori browser tamu.
+     • "Save Image" menyimpan ke perangkat tamu (galeri / Downloads / share sheet iOS).
+     File twibbon: public/images/twibbon-boy.webp (biru) & public/images/twibbon-girl.webp (pink)
+══════════════════════════════════════════════════════════════ --}}
+<style>
+/* tombol pembuka (di gate card, di bawah "No, sorry…") */
+.gate-btn-cap{background:rgba(255,255,255,.92);color:#d6125f;border:2px solid rgba(255,255,255,.95);
+  box-shadow:0 8px 22px rgba(120,10,50,.28),inset 0 1px 0 #fff}
+.gate-btn-cap:hover{background:#fff}
+
+/* layar photo booth */
+#tw-root{position:fixed;inset:0;z-index:9500;display:none;flex-direction:column;color:#fff;font-family:'Nunito',sans-serif;
+  background:radial-gradient(120% 70% at 50% 25%,rgba(255,120,160,.5),transparent 70%),linear-gradient(160deg,#ffc9d6 0%,#ffb09b 45%,#ff9566 100%);
+  padding:max(10px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));
+  opacity:0;transition:opacity .35s ease;overflow:hidden}
+#tw-root.on{display:flex}
+#tw-root.show{opacity:1}
+#tw-root *{box-sizing:border-box}
+#tw-root button{font-family:inherit;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+#tw-root[data-g="boy"]{background:radial-gradient(120% 70% at 50% 25%,rgba(120,190,255,.55),transparent 70%),linear-gradient(160deg,#bfe3ff 0%,#8fc8f5 50%,#ffc98a 130%)}
+
+.tw-head{display:flex;align-items:center;justify-content:space-between;gap:8px;flex:0 0 auto;min-height:44px}
+.tw-title{margin:0;flex:1;text-align:center;font-family:'Playfair Display',Georgia,serif;font-style:italic;font-weight:900;
+  font-size:clamp(18px,5vw,26px);text-shadow:0 2px 0 rgba(180,30,60,.4),0 6px 18px rgba(120,10,50,.35)}
+#tw-root[data-g="boy"] .tw-title{text-shadow:0 2px 0 rgba(20,70,150,.45),0 6px 18px rgba(20,60,130,.35)}
+.tw-icon-btn{width:42px;height:42px;border-radius:50%;border:2px solid rgba(255,255,255,.7);background:rgba(255,255,255,.22);color:#fff;
+  font-size:18px;font-weight:900;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);box-shadow:0 4px 12px rgba(0,0,0,.15)}
+.tw-icon-btn:active{transform:scale(.92)}
+
+.tw-main{flex:1;min-height:0;display:flex;flex-direction:column}
+.tw-step{display:none;flex:1;min-height:0;flex-direction:column;align-items:center;justify-content:center;gap:12px}
+#tw-root[data-step="choose"] .tw-step[data-step="choose"],
+#tw-root[data-step="camera"] .tw-step[data-step="camera"],
+#tw-root[data-step="result"] .tw-step[data-step="result"]{display:flex}
+
+/* pilih Boy / Girl */
+.tw-sub{margin:0;font-weight:800;font-size:clamp(13px,3.6vw,16px);text-shadow:0 2px 8px rgba(120,10,50,.4);text-align:center}
+.tw-choices{display:flex;gap:14px;justify-content:center;width:100%;max-width:540px}
+.tw-choice{flex:1;max-width:250px;min-width:0;border:0;background:none;padding:0;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:10px;color:#fff}
+.tw-thumb{position:relative;display:block;width:min(100%,calc((100vh - 250px)*.6667));width:min(100%,calc((100dvh - 250px)*.6667));
+  min-width:110px;aspect-ratio:2/3;border-radius:18px;overflow:hidden;background:#fff7f0;box-shadow:0 14px 30px rgba(120,10,50,.35);
+  transition:transform .25s cubic-bezier(.22,1,.36,1)}
+.tw-thumb::before{content:'';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:44px;opacity:.5}
+.tw-thumb img{position:absolute;inset:0;width:100%;height:100%;display:block}
+.tw-choice:hover .tw-thumb{transform:translateY(-4px) scale(1.02)}
+.tw-choice:active .tw-thumb{transform:scale(.97)}
+.tw-pick{display:block;width:100%;border-radius:999px;padding:12px 10px;font-weight:900;font-size:clamp(15px,4vw,18px);letter-spacing:.04em;
+  box-shadow:0 8px 20px rgba(0,0,0,.2),inset 0 1px 0 rgba(255,255,255,.5)}
+.tw-choice[data-gender="boy"] .tw-pick{background:linear-gradient(135deg,#2f8bff,#1a5fd1)}
+.tw-choice[data-gender="girl"] .tw-pick{background:linear-gradient(135deg,#ff1a7e,#ff6a8d)}
+
+/* kamera & hasil */
+.tw-stage{position:relative;aspect-ratio:2/3;border-radius:18px;overflow:hidden;background:#1d1417;
+  width:min(92vw,calc((100vh - 215px)*.6667));width:min(92vw,calc((100dvh - 215px)*.6667));min-width:150px;
+  box-shadow:0 18px 44px rgba(90,10,40,.45),0 0 0 3px rgba(255,255,255,.55)}
+.tw-stage video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;background:#1d1417}
+.tw-stage video.tw-mirror{transform:scaleX(-1)}
+.tw-frame,.tw-stage>img#tw-result{position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none;user-select:none;-webkit-user-select:none}
+.tw-stage>img#tw-result{object-fit:cover;pointer-events:auto;-webkit-touch-callout:default}
+.tw-msg{position:absolute;left:14px;right:14px;top:50%;transform:translateY(-50%);z-index:4;text-align:center;font-weight:800;
+  font-size:clamp(13px,3.6vw,15px);line-height:1.5;padding:14px;border-radius:14px;background:rgba(40,10,25,.72);
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.tw-msg[hidden],.tw-count[hidden]{display:none}
+.tw-count{position:absolute;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',Georgia,serif;
+  font-weight:900;font-style:italic;font-size:clamp(90px,34vw,180px);color:#fff;text-shadow:0 6px 30px rgba(120,10,50,.7);pointer-events:none}
+.tw-flash{position:absolute;inset:0;z-index:6;background:#fff;opacity:0;pointer-events:none}
+.tw-flash.go{animation:tw-flash .45s ease-out}
+@keyframes tw-flash{0%{opacity:.9}100%{opacity:0}}
+.tw-chip{position:absolute;top:8px;right:8px;z-index:5;border:0;cursor:pointer;border-radius:999px;padding:7px 12px;color:#fff;font-weight:800;font-size:12px;
+  background:rgba(40,10,25,.55);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+
+.tw-controls{display:flex;align-items:center;justify-content:center;gap:clamp(22px,8vw,44px);flex:0 0 auto;width:100%}
+.tw-side-btn{width:56px;height:56px;border-radius:50%;border:2px solid rgba(255,255,255,.7);background:rgba(255,255,255,.22);color:#fff;
+  font-size:22px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;gap:2px;
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.tw-side-btn small{font-size:9px;font-weight:800;letter-spacing:.03em}
+.tw-side-btn[hidden]{display:flex;visibility:hidden}
+.tw-side-btn.tw-pulse{animation:tw-pulse 1.6s ease-in-out infinite;background:linear-gradient(135deg,#ff1a7e,#ff8a2a)}
+@keyframes tw-pulse{0%,100%{box-shadow:0 0 0 0 rgba(255,255,255,.7)}50%{box-shadow:0 0 0 10px rgba(255,255,255,0)}}
+.tw-shutter{width:76px;height:76px;border-radius:50%;border:4px solid #fff;background:rgba(255,255,255,.18);padding:6px;cursor:pointer;
+  box-shadow:0 8px 22px rgba(120,10,50,.4);transition:transform .15s}
+.tw-shutter span{display:block;width:100%;height:100%;border-radius:50%;background:linear-gradient(135deg,#ff1a7e,#ff8a2a)}
+#tw-root[data-g="boy"] .tw-shutter span{background:linear-gradient(135deg,#2f8bff,#1a5fd1)}
+.tw-shutter:active{transform:scale(.92)}
+.tw-shutter:disabled{opacity:.45;cursor:not-allowed}
+
+.tw-actions{display:flex;gap:10px;width:min(92vw,420px);flex:0 0 auto}
+.tw-btn{flex:1;border:0;cursor:pointer;border-radius:999px;padding:14px 16px;font-weight:900;font-size:clamp(14px,3.9vw,16px);letter-spacing:.03em;color:#fff;min-height:48px}
+.tw-btn-primary{flex:1.6;background:linear-gradient(135deg,#ff1a7e,#ff8a2a);box-shadow:0 8px 22px rgba(255,26,126,.45),inset 0 1px 0 rgba(255,255,255,.5)}
+#tw-root[data-g="boy"] .tw-btn-primary{background:linear-gradient(135deg,#2f8bff,#1a5fd1);box-shadow:0 8px 22px rgba(30,100,220,.45),inset 0 1px 0 rgba(255,255,255,.5)}
+.tw-btn-ghost{background:rgba(255,255,255,.22);border:2px solid rgba(255,255,255,.7);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px)}
+.tw-btn:active{transform:scale(.97)}
+.tw-note{margin:0;font-weight:700;font-size:12px;text-align:center;opacity:.95;text-shadow:0 1px 6px rgba(120,10,50,.4);max-width:92vw}
+
+/* HP landscape: stage kiri, kontrol kanan */
+@media (max-height:520px) and (orientation:landscape){
+  .tw-step{flex-direction:row;gap:22px;flex-wrap:nowrap}
+  .tw-stage{width:calc((100vh - 70px)*.6667);width:calc((100dvh - 70px)*.6667);min-width:120px}
+  .tw-controls{flex-direction:column;width:auto}
+  .tw-actions{flex-direction:column;width:200px}
+  .tw-note{display:none}
+  .tw-thumb{width:min(100%,calc((100dvh - 130px)*.6667))}
+  .tw-choices{max-width:420px}
+}
+@media (prefers-reduced-motion:reduce){#tw-root{transition:none}.tw-flash.go,.tw-side-btn.tw-pulse{animation:none}}
+</style>
+
+<div id="tw-root" role="dialog" aria-modal="true" aria-label="Twibbon photo booth" aria-hidden="true" data-step="choose"
+     data-boy="{{ asset('images/twibbon-boy.webp') }}" data-girl="{{ asset('images/twibbon-girl.webp') }}">
+    <header class="tw-head">
+        <button type="button" class="tw-icon-btn" id="tw-back" aria-label="Back">←</button>
+        <h2 class="tw-title" id="tw-title">Pick your twibbon</h2>
+        <button type="button" class="tw-icon-btn" id="tw-close" aria-label="Close">✕</button>
+    </header>
+
+    <main class="tw-main">
+        {{-- 1. Pilih Boy / Girl --}}
+        <section class="tw-step" data-step="choose">
+            <p class="tw-sub">Choose the frame that fits you ✨</p>
+            <div class="tw-choices">
+                <button type="button" class="tw-choice" data-gender="boy">
+                    <span class="tw-thumb"><img src="{{ asset('images/twibbon-boy.webp') }}" alt="Blue twibbon for boys"></span>
+                    <span class="tw-pick">Boy</span>
+                </button>
+                <button type="button" class="tw-choice" data-gender="girl">
+                    <span class="tw-thumb"><img src="{{ asset('images/twibbon-girl.webp') }}" alt="Pink twibbon for girls"></span>
+                    <span class="tw-pick">Girl</span>
+                </button>
+            </div>
+        </section>
+
+        {{-- 2. Kamera --}}
+        <section class="tw-step" data-step="camera">
+            <div class="tw-stage">
+                <video id="tw-video" playsinline muted autoplay></video>
+                <img class="tw-frame" id="tw-frame" alt="" draggable="false">
+                <div class="tw-count" id="tw-count" hidden></div>
+                <div class="tw-flash" id="tw-flash"></div>
+                <div class="tw-msg" id="tw-msg" hidden></div>
+                <button type="button" class="tw-chip" id="tw-timer">⏱ Timer: Off</button>
+            </div>
+            <div class="tw-controls">
+                <button type="button" class="tw-side-btn" id="tw-upload" aria-label="Choose a photo or open the camera app"><small>Gallery</small></button>
+                <button type="button" class="tw-shutter" id="tw-shutter" aria-label="Take photo" disabled><span></span></button>
+                <button type="button" class="tw-side-btn" id="tw-flip" aria-label="Switch camera" hidden><small>Flip</small></button>
+            </div>
+            <input type="file" id="tw-file" accept="image/*" hidden>
+        </section>
+
+        {{-- 3. Hasil --}}
+        <section class="tw-step" data-step="result">
+            <div class="tw-stage"><img id="tw-result" alt="Your twibbon photo"></div>
+            <div class="tw-actions">
+                <button type="button" class="tw-btn tw-btn-primary" id="tw-save">Save Image</button>
+                <button type="button" class="tw-btn tw-btn-ghost" id="tw-retake">Retake</button>
+            </div>
+            <p class="tw-note" id="tw-note">Your photo stays on your device — it is never uploaded.</p>
+        </section>
+    </main>
+</div>
+
+<script>
+(function () {
+    var root = document.getElementById('tw-root');
+    if (!root) return;
+    var $ = function (id) { return document.getElementById(id); };
+
+    var video = $('tw-video'), frame = $('tw-frame'), msg = $('tw-msg'), countEl = $('tw-count'), flashEl = $('tw-flash'),
+        shutter = $('tw-shutter'), flip = $('tw-flip'), timerBtn = $('tw-timer'), fileIn = $('tw-file'), upBtn = $('tw-upload'),
+        resImg = $('tw-result'), saveBtn = $('tw-save'), retakeBtn = $('tw-retake'), noteEl = $('tw-note'),
+        titleEl = $('tw-title'), backBtn = $('tw-back'), closeBtn = $('tw-close');
+
+    var SRC    = { boy: root.getAttribute('data-boy'), girl: root.getAttribute('data-girl') };
+    var TITLES = { choose: 'Pick your twibbon', camera: 'Strike a pose! 📸', result: 'Looking great! ✨' };
+    var NOTE   = '🔒 Your photo stays on your device — it is never uploaded.';
+    var NOTE_IOS = '📱 Tap Save Image, then choose "Save Image" in the menu to add it to Photos. Or press & hold the photo → Add to Photos.';
+    var W = 1024, H = 1536;                     // ukuran hasil = ukuran twibbon (2:3)
+
+    var gender = null, step = 'choose', stream = null, facing = 'user', mirror = true,
+        timerSec = 0, busy = false, blob = null, blobUrl = null, imgs = {}, startToken = 0, cdTimer = null;
+
+    var isIOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+
+    /* ---------- util ---------- */
+    function preload() {
+        ['boy', 'girl'].forEach(function (g) {
+            if (!imgs[g]) { var im = new Image(); im.decoding = 'async'; im.src = SRC[g]; imgs[g] = im; }
+        });
+    }
+    function whenLoaded(im, ok, fail) {
+        if (im.complete && im.naturalWidth) return ok();
+        im.addEventListener('load', ok, { once: true });
+        im.addEventListener('error', fail, { once: true });
+    }
+    function setStep(s) {
+        step = s; root.setAttribute('data-step', s);
+        titleEl.textContent = TITLES[s];
+        backBtn.style.visibility = (s === 'choose') ? 'hidden' : 'visible';
+    }
+    function showMsg(t) { msg.hidden = !t; msg.textContent = t || ''; }
+    function clearCountdown() { if (cdTimer) { clearInterval(cdTimer); cdTimer = null; } countEl.hidden = true; }
+    function clearResult() {
+        if (blobUrl) { URL.revokeObjectURL(blobUrl); blobUrl = null; }
+        blob = null; resImg.removeAttribute('src');
+    }
+
+    /* ---------- kamera ---------- */
+    function stopCam() {
+        clearCountdown(); busy = false;
+        if (stream) { stream.getTracks().forEach(function (t) { t.stop(); }); stream = null; }
+        video.srcObject = null;
+    }
+    function noCam() {
+        shutter.disabled = true; flip.hidden = true;
+        showMsg('Camera is not available. Allow camera access in your browser, or open this link in Chrome / Safari ' +
+                '(in-app browsers like Instagram or WhatsApp often block it). You can also tap Gallery to use a photo.');
+        upBtn.classList.add('tw-pulse');
+    }
+    function startCam() {
+        var token = ++startToken;
+        stopCam(); shutter.disabled = true; upBtn.classList.remove('tw-pulse');
+        showMsg('Starting camera…'); video.style.visibility = 'hidden';
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { noCam(); return; }
+
+        navigator.mediaDevices.getUserMedia({
+            video: { facingMode: { ideal: facing }, width: { ideal: 1920 }, height: { ideal: 1920 } }, audio: false
+        }).then(function (s) {
+            if (token !== startToken || step !== 'camera' || !root.classList.contains('on')) {
+                s.getTracks().forEach(function (t) { t.stop(); }); return;
+            }
+            stream = s; video.srcObject = s;
+            var tr = s.getVideoTracks()[0], st = (tr && tr.getSettings) ? tr.getSettings() : {};
+            mirror = st.facingMode ? (st.facingMode === 'user') : (facing === 'user');
+            video.classList.toggle('tw-mirror', mirror);
+            return video.play().catch(function () {}).then(function () {
+                video.style.visibility = 'visible'; showMsg(''); shutter.disabled = false;
+                if (navigator.mediaDevices.enumerateDevices) {
+                    navigator.mediaDevices.enumerateDevices().then(function (l) {
+                        flip.hidden = l.filter(function (d) { return d.kind === 'videoinput'; }).length < 2;
+                    }).catch(function () {});
+                }
+            });
+        }).catch(function () { if (token === startToken) noCam(); });
+    }
+
+    /* ---------- gabung foto + twibbon di canvas ---------- */
+    function compose(src, sw, sh, mirrorIt) {
+        var im = imgs[gender];
+        whenLoaded(im, function () {
+            var cv = document.createElement('canvas'); cv.width = W; cv.height = H;
+            var ctx = cv.getContext('2d');
+            ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H);
+            var sc = Math.max(W / sw, H / sh), cw = W / sc, ch = H / sc, sx = (sw - cw) / 2, sy = (sh - ch) / 2;   // object-fit: cover
+            ctx.save();
+            if (mirrorIt) { ctx.translate(W, 0); ctx.scale(-1, 1); }
+            ctx.drawImage(src, sx, sy, cw, ch, 0, 0, W, H);
+            ctx.restore();
+            ctx.drawImage(im, 0, 0, W, H);                                    // twibbon di atas foto
+            cv.toBlob(function (b) {
+                busy = false;
+                if (!b) { showMsg('Oops, could not create the image. Please try again.'); shutter.disabled = !stream; return; }
+                clearResult();
+                blob = b; blobUrl = URL.createObjectURL(b);                    // hanya di memori browser
+                resImg.src = blobUrl;
+                stopCam(); noteEl.textContent = isIOS ? NOTE_IOS : NOTE; setStep('result');
+            }, 'image/jpeg', 0.92);
+        }, function () { busy = false; showMsg('Twibbon failed to load. Check your connection and try again.'); });
+    }
+
+    function snap() {
+        if (busy || !stream || !video.videoWidth) return;
+        busy = true; shutter.disabled = true;
+        var go = function () {
+            flashEl.classList.remove('go'); void flashEl.offsetWidth; flashEl.classList.add('go');
+            compose(video, video.videoWidth, video.videoHeight, mirror);
+        };
+        if (!timerSec) { go(); return; }
+        var n = timerSec; countEl.hidden = false; countEl.textContent = n;
+        cdTimer = setInterval(function () {
+            n--;
+            if (n <= 0) { clearCountdown(); go(); } else { countEl.textContent = n; }
+        }, 1000);
+    }
+
+    /* ---------- simpan ke perangkat ---------- */
+    function download(name) {
+        var a = document.createElement('a');
+        a.href = blobUrl; a.download = name; a.style.display = 'none';
+        document.body.appendChild(a); a.click();
+        setTimeout(function () { a.remove(); }, 500);
+        noteEl.textContent = isIOS ? NOTE_IOS : '✅ Saved! Open your Gallery / Photos (Download album).';
+    }
+    function saveImage() {
+        if (!blob) return;
+        var name = 'loviena-sweet17-' + gender + '-' + Date.now() + '.jpg';
+        if (isIOS && navigator.share && window.File) {                         // iOS: share sheet → "Save Image" masuk Photos
+            try {
+                var file = new File([blob], name, { type: 'image/jpeg' });
+                if (navigator.canShare && navigator.canShare({ files: [file] })) {
+                    navigator.share({ files: [file] }).then(function () {
+                        noteEl.textContent = '✅ Done! Pick "Save Image" to put it in your Photos.';
+                    }).catch(function (e) { if (!e || e.name !== 'AbortError') download(name); });
+                    return;
+                }
+            } catch (e) {}
+        }
+        download(name);
+    }
+
+    /* ---------- navigasi ---------- */
+    function openBooth() {
+        preload(); clearResult(); setStep('choose'); root.removeAttribute('data-g');
+        root.classList.add('on'); root.setAttribute('aria-hidden', 'false');
+        requestAnimationFrame(function () { requestAnimationFrame(function () { root.classList.add('show'); }); });
+    }
+    function closeBooth() {
+        stopCam(); startToken++; clearResult(); showMsg('');
+        root.classList.remove('show'); root.setAttribute('aria-hidden', 'true');
+        setTimeout(function () { if (!root.classList.contains('show')) root.classList.remove('on'); }, 360);
+    }
+    function pick(g) {
+        gender = g; root.setAttribute('data-g', g); frame.src = SRC[g];
+        setStep('camera'); startCam();
+    }
+    function goBack() {
+        if (step === 'camera') { stopCam(); startToken++; showMsg(''); setStep('choose'); root.removeAttribute('data-g'); }
+        else if (step === 'result') { clearResult(); setStep('camera'); startCam(); }
+    }
+
+    /* ---------- event ---------- */
+    Array.prototype.forEach.call(document.querySelectorAll('[data-tw-open]'), function (b) {
+        b.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); openBooth(); });
+    });
+    Array.prototype.forEach.call(root.querySelectorAll('.tw-choice'), function (b) {
+        b.addEventListener('click', function () { pick(b.getAttribute('data-gender')); });
+    });
+    closeBtn.addEventListener('click', closeBooth);
+    backBtn.addEventListener('click', goBack);
+    shutter.addEventListener('click', snap);
+    retakeBtn.addEventListener('click', goBack);
+    saveBtn.addEventListener('click', saveImage);
+    flip.addEventListener('click', function () { facing = (facing === 'user') ? 'environment' : 'user'; startCam(); });
+    timerBtn.addEventListener('click', function () {
+        timerSec = timerSec ? 0 : 3;
+        timerBtn.textContent = '⏱ Timer: ' + (timerSec ? timerSec + 's' : 'Off');
+    });
+    upBtn.addEventListener('click', function () { fileIn.click(); });
+    fileIn.addEventListener('change', function () {                          // cadangan: pilih foto / buka app kamera bawaan HP
+        var f = fileIn.files && fileIn.files[0]; if (!f || !gender) return;
+        var url = URL.createObjectURL(f), im = new Image();
+        im.onload = function () { busy = true; compose(im, im.naturalWidth, im.naturalHeight, false); URL.revokeObjectURL(url); };
+        im.onerror = function () { URL.revokeObjectURL(url); showMsg('That file could not be opened. Please pick another photo.'); };
+        im.src = url; fileIn.value = '';
+    });
+    document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape' && root.classList.contains('show')) closeBooth();
+    });
+    document.addEventListener('visibilitychange', function () {              // hemat baterai + hindari kamera beku di iOS
+        if (!root.classList.contains('show') || step !== 'camera') return;
+        if (document.hidden) stopCam(); else startCam();
+    });
+})();
+</script>
 
 </body>
 </html>
